@@ -6,12 +6,10 @@ import com.bank.model.Account;
 import com.bank.service.AccountService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Date;
+import java.util.UUID;
 
 @Controller
 @RequestMapping
@@ -48,6 +46,15 @@ public class AccountController {
 
         accountService.createNewAccount
                 (account.getBalance(),new Date(),account.getAccountType(),account.getUserID());
+        return "redirect:/index";
+    }
+
+    @GetMapping("/delete/{id}")
+    public String deleteAccount(@PathVariable("id") UUID id){
+
+        accountService.deleteAccount(id);
+        System.out.println("id = " + id);
+
         return "redirect:/index";
     }
 
