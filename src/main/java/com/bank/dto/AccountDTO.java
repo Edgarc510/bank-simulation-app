@@ -1,23 +1,28 @@
-package com.bank.model;
+package com.bank.dto;
 
 import com.bank.enums.AccountStatus;
 import com.bank.enums.AccountType;
-import lombok.Builder;
-import lombok.Data;
+import com.sun.istack.NotNull;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.util.Date;
-import java.util.UUID;
 
-@Data
-@Builder
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 
-public class Account {
+public class AccountDTO {
 
-    private UUID id;
+    private Long id;
+    @NotNull
+//    @Positive
     private BigDecimal balance;
+    @NotNull
     private AccountType accountType;
     private Date creationDate;
-    private Long userID;
+    @NotNull
+    private Long userId;
     private AccountStatus accountStatus;
 }

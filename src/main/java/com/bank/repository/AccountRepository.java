@@ -1,37 +1,16 @@
 package com.bank.repository;
 
-import com.bank.exception.RecordNotFoundException;
-import com.bank.model.Account;
+import com.bank.entity.Account;
+import com.bank.enums.AccountStatus;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
-
-@Component
-public class AccountRepository {
-
-    //Simulation of storing information
-    public static List<Account> accountList = new ArrayList<>();
-
-    public Account save(Account account){
-        accountList.add(account);
-
-        return account;
-    }
-
-    public List<Account> findAll() {
-        return accountList;
-    }
-
-    public Account findById(UUID id) {
-
-        //write a method, that finds the account inside the list, if not throws
-        //RecordNotFoundException
-        return accountList.stream().filter(account -> account.getId().equals(id))
-                .findAny().orElseThrow(()-> new RecordNotFoundException("Account does not exist in DB"));
 
 
-
-    }
+@Repository
+public interface AccountRepository extends JpaRepository<Account,Long> {
+    //Derive query
+    List<Account> findAllByAccountStatus(AccountStatus accountStatus);
 }

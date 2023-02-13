@@ -1,56 +1,93 @@
 package com.bank.service.impl;
 
+import com.bank.dto.AccountDTO;
+import com.bank.entity.Transaction;
 import com.bank.enums.AccountType;
 import com.bank.exception.AccountOwnershipException;
 import com.bank.exception.BadRequestException;
 import com.bank.exception.BalanceNotSufficientException;
-import com.bank.model.Account;
-import com.bank.model.Transaction;
-import com.bank.repository.AccountRepository;
-import com.bank.service.TransactionServices;
+import com.bank.dto.TransactionDTO;
+import com.bank.exception.UnderConstructionException;
+import com.bank.mapper.TransactionMapper;
+import com.bank.repository.TransactionRepository;
+import com.bank.service.AccountService;
+import com.bank.service.TransactionService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
-import java.util.UUID;
+import java.util.stream.Collectors;
+
 @Component
-public class TransactionServiceImpl implements TransactionServices {
+public class TransactionServiceImpl implements TransactionService {
 
-    AccountRepository accountRepository;
+    @Value("${under_construction}")
+    private boolean underConstruction;
 
-    public TransactionServiceImpl(AccountRepository accountRepository) {
-        this.accountRepository = accountRepository;
+    AccountService accountService;
+    TransactionRepository transactionRepository;
+    TransactionMapper transactionMapper;
+
+    public TransactionServiceImpl(AccountService accountService, TransactionRepository transactionRepository, TransactionMapper transactionMapper) {
+        this.accountService = accountService;
+        this.transactionRepository = transactionRepository;
+        this.transactionMapper = transactionMapper;
     }
 
     @Override
-    public Transaction makeTransfer(Account sender, Account receiver, BigDecimal amount, Date creationDate, String message) {
+    public void makeTransfer(AccountDTO sender, AccountDTO receiver, BigDecimal amount, Date creationDate, String message) {
 
-        validateAccount(sender, receiver);
-        checkAccountOwnership(sender,receiver);
-        executeBalanceAndUpdateIfRequired(amount,sender,receiver);
+        if(!underConstruction) {
+            validateAccount(sender, receiver);
+            checkAccountOwnership(sender, receiver);
+            executeBalanceAndUpdateIfRequired(amount, sender, receiver);
         /*
         after all validations are completed, and money is transferred, we need to create Transaction object and save/return it
          */
-        //please create needed classes/ methods for this step, save the transactions.
-        return null;
+
+            //we need to create dto after all validations, then convert it to entity and save to the db
+            TransactionDTO transactionDTO = new TransactionDTO(sender,receiver,amount,message,creationDate);
+
+            transactionRepository.save(transactionMapper.convertToEntity(transactionDTO));
+        }else {
+            throw new UnderConstructionException("App is under construction, try again later");
+        }
     }
 
-    private void executeBalanceAndUpdateIfRequired(BigDecimal amount, Account sender, Account receiver) {
+    private void executeBalanceAndUpdateIfRequired(BigDecimal amount, AccountDTO sender, AccountDTO receiver) {
         if(checkSenderBalance(sender,amount)){
             sender.setBalance(sender.getBalance().subtract(amount));
             receiver.setBalance(receiver.getBalance().add(amount));
+
+            /*
+                get the dto from database for both sender and receiver, update balance and save it.
+                create accountService updateAccount method to save it.
+             */
+            //retrieve the object from database for sender
+            AccountDTO senderAcc = accountService.retrieveById(sender.getId());
+            senderAcc.setBalance(sender.getBalance());
+            //save again to database
+            accountService.updateAccount(senderAcc);
+
+            AccountDTO receiverAcc = accountService.retrieveById(receiver.getId());
+            receiverAcc.setBalance(receiver.getBalance());
+
+            accountService.updateAccount(receiverAcc);
+
+
         }else{
             throw new BalanceNotSufficientException("Balance is not enough for this transfer");
         }
     }
 
-    private boolean checkSenderBalance(Account sender, BigDecimal amount) {
+    private boolean checkSenderBalance(AccountDTO sender, BigDecimal amount) {
         //verify the sender has enough balance
         return sender.getBalance().subtract(amount).compareTo(BigDecimal.ZERO) >=0;
     }
 
-    private void checkAccountOwnership(Account sender, Account receiver) {
+    private void checkAccountOwnership(AccountDTO sender, AccountDTO receiver) {
 
         /*
          write an if statement that checks if one of the account is saving,
@@ -58,7 +95,7 @@ public class TransactionServiceImpl implements TransactionServices {
          */
 
         if((sender.getAccountType().equals(AccountType.SAVING)
-                ||receiver.getAccountType().equals(AccountType.SAVING))&& !sender.getUserID().equals(receiver.getUserID()))
+                ||receiver.getAccountType().equals(AccountType.SAVING))&& !sender.getUserId().equals(receiver.getUserId()))
         {
             throw new AccountOwnershipException("One of the accounts is Savings." +
                     " Transactions between savings and checking account are allowed between same user accounts only." +
@@ -66,7 +103,7 @@ public class TransactionServiceImpl implements TransactionServices {
         }
     }
 
-    private void validateAccount(Account sender, Account receiver) {
+    private void validateAccount(AccountDTO sender, AccountDTO receiver) {
 
           /*
             -if any of the account is null
@@ -79,7 +116,7 @@ public class TransactionServiceImpl implements TransactionServices {
         }
 
         if(sender.getId().equals(receiver.getId())){
-            throw new BadRequestException("Sender account needs to be different that receiver");
+            throw new BadRequestException("Sender account needs to be different than receiver");
         }
 
         findAccountById(sender.getId());
@@ -88,13 +125,35 @@ public class TransactionServiceImpl implements TransactionServices {
 
     }
 
-    private Account findAccountById(UUID id) {
+    private AccountDTO findAccountById(Long id) {
 
-        return accountRepository.findById(id);
+        return accountService.retrieveById(id);
     }
 
     @Override
-    public List<Transaction> findAllTransaction() {
-        return null;
+    public List<TransactionDTO> findAllTransaction() {
+
+        return transactionRepository.findAll().stream()
+                .map(transactionMapper::convertToDTO).collect(Collectors.toList());
+
+    }
+
+    @Override
+    public List<TransactionDTO> lastTransactionsList() {
+        //we want to list latest 10 transaction
+        //if it does not exist we need to write a native query for last 10 transactions
+        //then convert it to dto and return it as list of dto
+           List<Transaction> transactionList = transactionRepository.findLastTenTransaction();
+           return transactionList.stream().map(transactionMapper::convertToDTO).collect(Collectors.toList());
+
+//        return transactionRepository.findLastTenTransaction().stream().map(transactionMapper::convertToDTO).collect(Collectors.toList());
+
+    }
+
+    @Override
+    public List<TransactionDTO> findTransactionListById(Long id) {
+        //write a JPQL query to retrieve list of transactions by ID
+        return transactionRepository.findTransactionListById(id).stream()
+                .map(transactionMapper::convertToDTO).collect(Collectors.toList());
     }
 }

@@ -1,0 +1,26 @@
+package com.bank.mapper;
+
+import com.bank.dto.AccountDTO;
+import com.bank.entity.Account;
+import org.modelmapper.ModelMapper;
+import org.springframework.stereotype.Component;
+
+@Component
+public class AccountMapper {
+
+    private final ModelMapper modelMapper;
+
+    public AccountMapper(ModelMapper modelMapper) {
+        this.modelMapper = modelMapper;
+    }
+
+    public AccountDTO convertToDTO(Account entity) {
+        //this method will accept account entity and will convert it to DTO
+        return modelMapper.map(entity,AccountDTO.class);
+    }
+
+    public Account convertToEntity(AccountDTO dto) {
+        //this method will accept DTO and convert it to entity
+        return modelMapper.map(dto,Account.class);
+    }
+}

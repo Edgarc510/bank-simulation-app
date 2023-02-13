@@ -1,16 +1,10 @@
 package com.bank;
 
-import com.bank.enums.AccountType;
-import com.bank.model.Account;
-import com.bank.service.AccountService;
-import com.bank.service.TransactionServices;
+import org.modelmapper.ModelMapper;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.ConfigurableApplicationContext;
-
-import java.math.BigDecimal;
-import java.util.Date;
+import org.springframework.context.annotation.Bean;
 
 @SpringBootApplication
 public class BankSimulationAppApplication {
@@ -42,6 +36,11 @@ public class BankSimulationAppApplication {
 //        accountService.listAllAccount().forEach(System.out::println);
 
 
+    }
+
+    @Bean
+    public ModelMapper modelMapper(){
+        return new ModelMapper();
     }
 
 
